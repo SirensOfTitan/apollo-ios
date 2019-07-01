@@ -175,7 +175,7 @@ public class HTTPNetworkTransport: NetworkTransport {
     includeQuery: Bool,
     extensions: GraphQLMap?
   ) -> GraphQLMap {
-    let commonBody: GraphQLMap = [
+    var body: GraphQLMap = [
       "variables": operation.variables,
     ]
     
@@ -183,37 +183,34 @@ public class HTTPNetworkTransport: NetworkTransport {
       guard let operationIdentifier = operation.operationIdentifier else {
         preconditionFailure("To send operation identifiers, Apollo types must be generated with operationIdentifiers")
       }
-      return commonBody.merging(["id": operationIdentifier], uniquingKeysWith: { $1 })
+      return body.merging(["id": operationIdentifier], uniquingKeysWith: { $1 })
     }
     
-    let response = commonBody
-      .merging(
-        ["query": includeQuery ? operation.queryDocument : nil, "extensions": extensions],
-        uniquingKeysWith: { $1 }
-      )
-      .compactMapValues { $0 }
+    if let extensions = extensions {
+      body["extensions"] = extensions
+    }
     
-    return response
+    if includeQuery {
+      body["query"] = operation.queryDocument
+    }
+    
+    return body
   }
     
   private func mountUrlWithQueryParamsIfNeeded(body: GraphQLMap) -> URL? {
     var queryStringItems = [URLQueryItem]()
-    if let query = body.jsonObject["query"] {
-      queryStringItems.append(URLQueryItem(name: "query", value: "\(query)"))
+    if let query = optionalValue(for: body, key: "query") {
+      queryStringItems.append(URLQueryItem(name: "query", value: "\(query.jsonValue)"))
     }
     
-    if areThereVariables(in: body),
-      let serializedVariables = try? serializationFormat.serialize(value: body.jsonObject["variables"]) {
-      queryStringItems.append(
-        URLQueryItem(name: "variables", value: getEncodedString(of: serializedVariables))
-      )
+    if let variables = optionalValue(for: body, key: "variables"),
+      let serializedVariables = try? serializationFormat.serialize(value: variables) {
+      queryStringItems.append(URLQueryItem(name: "variables", value: getEncodedString(of: serializedVariables)))
     }
     
-    if areThereExtensions(in: body),
-      let serializedExtensions = try? serializationFormat.serialize(value: body.jsonObject["extensions"]) {
-      queryStringItems.append(
-        URLQueryItem(name: "extensions", value: getEncodedString(of: serializedExtensions))
-      )
+    if let extensions = optionalValue(for: body, key: "extensions"),
+      let serializedExtensions = try? serializationFormat.serialize(value: extensions) {
+      queryStringItems.append(URLQueryItem(name: "extensions", value: getEncodedString(of: serializedExtensions)))
     }
     
     guard !queryStringItems.isEmpty,
@@ -223,19 +220,13 @@ public class HTTPNetworkTransport: NetworkTransport {
     
     return URL(string: "\(self.url.absoluteString)?\(queryString)")
   }
-
-  private func areThereVariables(in map: GraphQLMap) -> Bool {
-    if let variables = map.jsonObject["variables"], "\(variables)" != "<null>" {
-        return true
-    }
-    return false
-  }
   
-  private func areThereExtensions(in map: GraphQLMap) -> Bool {
-    if let extensions = map.jsonObject["extensions"], "\(extensions)" != "<null>" {
-      return true
+  private func optionalValue(for body: GraphQLMap, key: String) -> JSONEncodable? {
+    let maybeValue = body[key]
+    if let value = body[key] {
+      return value
     }
-    return false
+    return nil
   }
 
   private func getEncodedString(of data: Data) -> String {

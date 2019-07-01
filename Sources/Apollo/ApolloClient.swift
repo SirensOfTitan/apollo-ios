@@ -81,7 +81,7 @@ public class ApolloClient {
   ///   - queue: A dispatch queue on which the result handler will be called. Defaults to the main queue.
   ///   - resultHandler: An optional closure that is called when query results are available or when an error occurs.
   /// - Returns: An object that can be used to cancel an in progress fetch.
-  @discardableResult public func fetch<Query: GraphQLQuery>(query: Query, fetchHTTPMethod: FetchHTTPMethod = .POST, includeQuery: Bool = false, extensions: GraphQLMap? = nil, cachePolicy: CachePolicy = .returnCacheDataElseFetch, queue: DispatchQueue = DispatchQueue.main, resultHandler: OperationResultHandler<Query>? = nil) -> Cancellable {
+  @discardableResult public func fetch<Query: GraphQLQuery>(query: Query, fetchHTTPMethod: FetchHTTPMethod = .POST, includeQuery: Bool = true, extensions: GraphQLMap? = nil, cachePolicy: CachePolicy = .returnCacheDataElseFetch, queue: DispatchQueue = DispatchQueue.main, resultHandler: OperationResultHandler<Query>? = nil) -> Cancellable {
     return _fetch(query: query, fetchHTTPMethod: fetchHTTPMethod, includeQuery: includeQuery, extensions: extensions, cachePolicy: cachePolicy, queue: queue, resultHandler: resultHandler)
   }
   
@@ -137,7 +137,7 @@ public class ApolloClient {
   ///   - queue: A dispatch queue on which the result handler will be called. Defaults to the main queue.
   ///   - resultHandler: An optional closure that is called when mutation results are available or when an error occurs.
   /// - Returns: An object that can be used to cancel an in progress mutation.
-  @discardableResult public func perform<Mutation: GraphQLMutation>(mutation: Mutation, fetchHTTPMethod: FetchHTTPMethod = .POST, includeQuery: Bool, extensions: GraphQLMap?, queue: DispatchQueue = DispatchQueue.main, resultHandler: OperationResultHandler<Mutation>? = nil) -> Cancellable {
+  @discardableResult public func perform<Mutation: GraphQLMutation>(mutation: Mutation, fetchHTTPMethod: FetchHTTPMethod = .POST, includeQuery: Bool = true, extensions: GraphQLMap? = nil, queue: DispatchQueue = DispatchQueue.main, resultHandler: OperationResultHandler<Mutation>? = nil) -> Cancellable {
     return _perform(mutation: mutation, fetchHTTPMethod: fetchHTTPMethod, includeQuery: includeQuery, extensions: extensions, queue: queue, resultHandler: resultHandler)
   }
   

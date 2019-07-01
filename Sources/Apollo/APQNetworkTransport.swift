@@ -3,26 +3,30 @@ import CryptoSwift
 
 /// Wraps a NetworkTransport to perform automated persisted queries.
 public final class APQNetworkTransport: NetworkTransport {
-  fileprivate let version = 1
+  fileprivate static let version = 1
+  
   var isEnabled: Bool = true
   let networkTransport: NetworkTransport
+  let useGETForPersistedQuery: Bool
   
-  public init(networkTransport: NetworkTransport) {
+  public init(networkTransport: NetworkTransport, useGETForPersistedQuery: Bool = false) {
     self.networkTransport = networkTransport
+    self.useGETForPersistedQuery = useGETForPersistedQuery
   }
   
   public func send<Operation>(
     operation: Operation,
     fetchHTTPMethod: FetchHTTPMethod,
     includeQuery: Bool,
-    extensions: GraphQLMap?, completionHandler: @escaping (GraphQLResponse<Operation>?, Error?) -> Void
+    extensions: GraphQLMap?,
+    completionHandler: @escaping (GraphQLResponse<Operation>?, Error?) -> Void
   ) -> Cancellable where Operation : GraphQLOperation {
     var newExtensions = extensions
     if isEnabled {
       newExtensions = (newExtensions ?? [:]).merging(
         [
           "persistedQuery": [
-            "version": version,
+            "version": type(of: self).version,
             "sha256Hash": operation.queryDocument.sha256()
           ]
         ],
@@ -32,7 +36,7 @@ public final class APQNetworkTransport: NetworkTransport {
     
     return networkTransport.send(
       operation: operation,
-      fetchHTTPMethod: fetchHTTPMethod,
+      fetchHTTPMethod: isEnabled && useGETForPersistedQuery ? .GET :  fetchHTTPMethod,
       includeQuery: !isEnabled,
       extensions: newExtensions
     ) { result, error in
@@ -54,7 +58,6 @@ public final class APQNetworkTransport: NetworkTransport {
         )
       }
     }
-    
   }
   
   fileprivate func hasErrorCode(errors: [GraphQLError], needleErrorCode: String) -> Bool {
